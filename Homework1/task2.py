@@ -18,7 +18,7 @@ class PriorityQueue(object):
         try:
             min = 0
             for i in range(len(self.queue)):
-                if self.queue[i].f < self.queue[min].f and self.queue[i].depth <= self.queue[min].depth:
+                if self.queue[i].f < self.queue[min].f:
                     min = i
             item = self.queue[min]
             del self.queue[min]
@@ -31,16 +31,16 @@ class PriorityQueue(object):
 class State(object):
     rows = 6
     columns = 3
+    f = 0
+    h = 0
 
     # Initialize the State class
-    def __init__(self, puzzleBoard, stateID, parentID, parentNode, g, h, move):
+    def __init__(self, puzzleBoard, stateID, parentID, parentNode, g, move):
         self.puzzleBoard = puzzleBoard
         self.ID = stateID
         self.parentID = parentID
         self.parentNode = parentNode
         self.g = g
-        self.h = h
-        self.f = g + h  # f is the priority value
         self.depth = 0
         self.moves = []
 
@@ -169,12 +169,22 @@ class Solver(object):
 
         return True if equalCount == (self.rows * self.columns) else False
 
+    # First heuristic function
+    def h1(self, state):
+        x = 0
+        for i in range(self.rows):
+            for j in range(self.columns):
+                if state.puzzleBoard[i][j] != self.goalPuzzleBoard[i][j] and state.puzzleBoard[i][j] != '0':
+                    x += 1
+        state.h = x
+        state.f = state.h + state.g
+
     # Method to run breath first search
     def bfs(self):
         startTime = time.time()
         # Create open list as a priority queue and add initial state to queue
         openList = PriorityQueue()
-        openList.insertValue(State(self.puzzleBoard, 1, None, None, 0, 0, None))
+        openList.insertValue(State(self.puzzleBoard, 1, None, None, 0, None))
 
         # Create closed list as a list
         closedList = list()
@@ -203,7 +213,7 @@ class Solver(object):
                     notDone = False
                 # Checks if the current puzzle board is not already in the closed list
                 elif currentState.puzzleBoard not in closedList:
-                    closedList.append(self.puzzleBoard)
+                    closedList.append(currentState.puzzleBoard)
                     nodesToClosedList += 1
                     stepCounter += 1
                     moves = currentState.moveTiles(closedList, currentState.puzzleBoard)
@@ -217,7 +227,7 @@ class Solver(object):
 
         # Create open list as a priority queue and add initial state to queue
         openList = PriorityQueue()
-        openList.insertValue(State(self.puzzleBoard, 1, None, None, 0, None))
+        openList.insertValue(State(self.puzzleBoard, 1, None, None, 0, " "))
 
         # Create closed list as a list
         closedList = list()
@@ -247,12 +257,14 @@ class Solver(object):
                     notDone = False
                 # Checks if the current puzzle board is not already in the closed list
                 elif currentState.puzzleBoard not in closedList:
-                    closedList.append(self.puzzleBoard)
+                    closedList.append(currentState.puzzleBoard)
                     nodesToClosedList += 1
                     stepCounter += 1
                     moves = currentState.moveTiles(closedList, currentState.puzzleBoard)
                     while len(moves.queue):
-                        openList.insertValue(moves.getValue())
+                        currentMove = moves.getValue()
+                        self.h1(currentMove)
+                        openList.insertValue(currentMove)
                         nodesToOpenList += 1
 
 
@@ -283,6 +295,9 @@ def exportStateInfo(file, state):
     file.write("\n--------------------------------")
     file.write("\nState ID: " + str(state.ID))
     file.write("\nParent State ID: " + str(state.parentID))
+    file.write("\nG(n): " + str(state.g))
+    file.write("\nH(n): " + str(state.h))
+    file.write("\nF(n): " + str(state.f))
     file.write("\nDepth: " + str(state.depth))
     file.write("\nMove: " + str(state.move))
     file.write("\n--------------------------------")
